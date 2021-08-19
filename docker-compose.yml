@@ -1,0 +1,40 @@
+version: "2.4"
+
+services:
+  ch_server:
+    container_name: myapp_ch_server
+    image: yandex/clickhouse-server
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes: 
+      - ./database:/var/lib/clickhouse/      
+    networks:
+      - myapp-network
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider localhost:8123/ping || exit 1
+      interval: 2s
+      timeout: 2s
+      retries: 16
+
+  ch_client:
+    container_name: myapp_ch_client
+    image: yandex/clickhouse-client
+    volumes:
+      - .:/home/ubuntu/
+    command: ['--host', 'ch_server', '--queries-file', '/home/ubuntu/create_database.tsv']
+    networks:
+      - myapp-network
+    depends_on:
+      ch_server:
+        condition: service_healthy
+
+networks:
+    myapp-network:
+
